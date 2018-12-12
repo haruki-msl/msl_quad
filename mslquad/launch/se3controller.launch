@@ -3,7 +3,7 @@
 <launch>
 
 	<arg name="mav_name" default="quad"/>
-	<arg name="id" default="0"/>
+	<arg name="id" default="3"/>
 	<arg name="quad_ns"  default="$(arg mav_name)$(arg id)"/>
 	<arg name="fixed_height" default="1.5"/>
 	<arg name="max_vel" default="0.5"/>
@@ -25,6 +25,10 @@
       <param name="M" value="1.04" />
       <param name="quadFrame" value="mslquad"/>      
 		</node>
-
 	</group>
+
+	<include file="$(find mslquad)/launch/joy_test.launch">
+		<arg name="id" value="$(arg id)" />
+	</include>
+
 </launch>

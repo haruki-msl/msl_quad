@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+   	<arg name="mav_name" default="quad"/>
+	<arg name="id" default="0"/>
+
+    <!-- quad joy node-->
+    <group ns="$(arg mav_name)$(arg id)">
+        <!-- joy -->
+        <arg name="teleop_args" default="-att" />
+
+        <node pkg="joy" type="joy_node" name="joy" required="True">
+            <param name="autorepeat_rate" value="10" /> <!-- Minimal update rate, Hz -->
+            <param name="dev" type="string" value="/dev/input/js1" />
+        </node>
+
+       
+    </group>
+</launch>

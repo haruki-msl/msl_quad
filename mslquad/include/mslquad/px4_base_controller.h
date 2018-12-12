@@ -88,12 +88,16 @@ private:
     ros::Subscriber px4VelSub_; // px4 velocity sub
     ros::Subscriber visionPoseSub_; // subscribe to mocap
     ros::ServiceServer emergencyLandSrv_; // service for emergency landing 
+    ros::Subscriber joy_Sub; // Joystick subscriber
 
     ros::Timer controlTimer_; // for fast loop
     ros::Timer slowTimer_;  // for slow loop
 
     double controlLoopFreq_; // frequency for fast control loop
     double slowLoopFreq_; // frequency for slower loop
+
+    Eigen::VectorXd joy_axes(6);
+    Eigen::VectorXd joy_buttons(12);
 
     void pathCB(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr& traj);
     void poseSubCB(const geometry_msgs::PoseStamped::ConstPtr& msg); // pose callback on PX4 local position
