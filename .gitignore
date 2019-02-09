@@ -47,3 +47,5 @@ qtcreator-*
 # Emacs
 .#*
 
+# CLion
+**/.idea
