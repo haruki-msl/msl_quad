@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id" default="0"/>
+    <arg name="file_path" default="$(env HOME)/catkin_ws/src/msl_quad/mslquad/resource/waypoints_sample.txt "/>
+
+    <group ns="$(arg mav_name)$(arg id)">
+        <node pkg="mslquad" type="waypoint_publisher" name="waypoint_publisher"
+              args="$(arg mav_name)$(arg id) $(arg file_path)" output="screen">
+        </node>
+    </group>
+
+</launch>

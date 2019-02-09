@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id" default="0"/>
+
+    <group ns="$(arg mav_name)$(arg id)">
+        <node pkg="mslquad" type="gpio.py" name="gpio" output="screen">
+            <param name="gpio_pin_number" value="30" />
+            <param name="gpio_target_topic" value="command/gpio"/>
+        </node>
+    </group>
+
+</launch>

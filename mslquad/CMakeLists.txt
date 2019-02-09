@@ -163,6 +163,15 @@ add_executable(safety src/safety.cpp)
 target_link_libraries(safety ${catkin_LIBRARIES})
 add_dependencies(safety ${PROJECT_NAME}_generate_messages_cpp)
 
+add_library(waypoint_publisher_lib
+        src/waypoint_publisher.cpp)
+add_dependencies(waypoint_publisher_lib ${PROJECT_NAME}_generate_messages_cpp)
+
+add_executable(waypoint_publisher
+        src/pose_track_waypoint_publisher_node.cpp)
+target_link_libraries(waypoint_publisher ${catkin_LIBRARIES} waypoint_publisher_lib)
+add_dependencies(waypoint_publisher ${PROJECT_NAME}_generate_messages_cpp)
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
