@@ -23,21 +23,23 @@ public:
 
     struct WaypointWithTime {
         geometry_msgs::Point position;
-        double yaw_deg;
+        double yaw_deg = 0.0;
         ros::Duration waiting_time_s;
+        bool gpio_out = false;
     };
 
 protected:
     std::string quadNS_; // ROS name space
     ros::NodeHandle nh_;
     ros::Publisher px4WayPointsPub_;
+    ros::Publisher odroidXU4GpioPub_;
 
 private:
     std::string waypoints_file_;
     std::queue<WaypointWithTime> waypoints_;
     double maxFreq_;
     ros::Time initial_time_;
-    ros::Time last_action_time_;
+    ros::Time next_action_time_;
     ros::Time current_time_;
     ros::Timer slowTimer_;
 

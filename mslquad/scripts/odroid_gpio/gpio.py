@@ -9,10 +9,15 @@ class GPIOSet:
 
     def __init__(self):
         rospy.init_node('gpio', anonymous=True)
-        self.pin_num = rospy.get_param('~gpio_pin_number')
-        self.topic_name = rospy.get_param('~gpio_target_topic')
+        try:
+            self.pin_num = rospy.get_param('~gpio_pin_number')
+            self.topic_name = rospy.get_param('~gpio_target_topic')
+        except KeyError:
+            print("Required ROS param(s) not found in ROS parameter server. Did you specify correct mav name?")
+        wpi.wiringPiSetup()
         wpi.pinMode(self.pin_num, 1)
         self.gpioSetSub = rospy.Subscriber(self.topic_name, Bool, self.gpio_set_cb)
+        rospy.loginfo("Initiated GPIO Subscriber node.")
 
     def gpio_set_cb(self, command):
         if command == Bool(True):
@@ -22,7 +27,6 @@ class GPIOSet:
 
 if __name__ == '__main__':
     gpioset = GPIOSet()
-    wpi.wiringPiSetup()
     rospy.spin()
 
 
