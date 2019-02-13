@@ -21,14 +21,13 @@ int main(int argc, char **argv) {
     ros::removeROSArgs(argc, argv, args);
     if (args.size() != 3) {
         ROS_ERROR("Usage: pose_track_waypoint_publisher_node <quad_ns> <waypoint_file> \n"
-                  "Each line should read waiting_time_s x y z yaw_deg");
+                  "Each line should read [waiting_time_s, x_m, y_m, z_m, yaw_deg, gpio_flag]");
         return -1;
     }
     std::string quad_ns = args.at(1);
     std::string waypoints_file_path = args.at(2);
 
     PX4WaypointPublisher waypoint_publisher(quad_ns, waypoints_file_path);
-    ROS_INFO("Waypoint_publisher node initiated.");
     ros::spin();
     return 0;
 }
