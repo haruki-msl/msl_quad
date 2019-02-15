@@ -8,10 +8,10 @@
                  quadrotors. When the clearance falls below the minimal
                  value, will request emergency landing by all tracked quads,
                  and terminate the normal autonomous behavior. Use this as 
-                 the last safety check, not an active collision avoidance/
+                 the last safety check, not an active collision avoidance.
 **************************************************************************/
 #include "mslquad/safety.h"
-#include<ros/ros.h>
+#include <ros/ros.h>
 
 // BEGIN: PoseTracker
 PoseTracker::PoseTracker(const std::string &poseTopic, const std::string &velTopic) : 
@@ -98,8 +98,8 @@ maxY_(2.7) {
         std::string topic = "/";
         topic += name;
         std::string posTopic = topic + "/mavros/local_position/pose";
-        std::string velTOpic = topic + "/mavros/local_position/velocity";
-        poseTrackers_.push_back(std::make_unique<PoseTracker>(posTopic, velTOpic));
+        std::string velTopic = topic + "/mavros/local_position/velocity";
+        poseTrackers_.push_back(std::make_unique<PoseTracker>(posTopic, velTopic));
         // create landing client
         std::string srvName = "/";
         srvName += name;
@@ -124,7 +124,7 @@ maxY_(2.7) {
     }
 
     mainTimer_ = nh_.createTimer(
-        ros::Duration(0.05), // running at 20Hz by default
+        ros::Duration(0.05), // running at 20Hz by default (TODO: parameter)
         &Safety::mainTimerCB, this);
     ROS_INFO("Safety guard running.");
 }
@@ -141,34 +141,36 @@ void Safety::mainTimerCB(const ros::TimerEvent& event) {
     for(const auto &t : poseTrackers_) {
         landPosAll.push_back(t->pose_.pose);
     }
-    for(int i=0; i<poseTrackers_.size()-1; ++i) {
-        // get distance based on current pose
-        double dist = getDist(poseTrackers_[i]->pose_.pose, poseTrackers_[i+1]->pose_.pose);
-        // get predicted distance after dtPred time
-        geometry_msgs::Pose posePred1 = predPoseGivenVel(
-            poseTrackers_[i]->pose_.pose,
-            poseTrackers_[i]->vel_, dtPred_);
-        geometry_msgs::Pose posePred2 = predPoseGivenVel(
-            poseTrackers_[i+1]->pose_.pose,
-            poseTrackers_[i+1]->vel_, dtPred_);
-        double distPred = getDist(posePred1, posePred2);
+    for(int i=0; i<poseTrackers_.size(); ++i) {
+        for(int j=i+1; j<poseTrackers_.size(); ++j) {
+            // get distance based on current pose
+            double dist = getDist(poseTrackers_[i]->pose_.pose, poseTrackers_[j]->pose_.pose);
+            // get predicted distance after dtPred time
+            geometry_msgs::Pose posePred1 = predPoseGivenVel(
+                poseTrackers_[i]->pose_.pose,
+                poseTrackers_[i]->vel_, dtPred_);
+            geometry_msgs::Pose posePred2 = predPoseGivenVel(
+                poseTrackers_[j]->pose_.pose,
+                poseTrackers_[j]->vel_, dtPred_);
+            double distPred = getDist(posePred1, posePred2);
 
-        if(dist < checkMinDist_ || distPred < checkMinDist_) {
-            ROS_INFO("Triggered safety guard");
-            ROS_INFO("dist = %f", dist);
-            ROS_INFO("distPred = %f", distPred);
-            requestLand = true;
-            auto unitVec = getUnitVecFromTwoPoseXY(
-                poseTrackers_[i]->pose_.pose, 
-                poseTrackers_[i+1]->pose_.pose);
-            landPosAll[i].position.x += sepDist_*unitVec.first;
-            landPosAll[i].position.y += sepDist_*unitVec.second;
-            landPosAll[i+1].position.x -= sepDist_*unitVec.first;
-            landPosAll[i+1].position.y -= sepDist_*unitVec.second;
-            landPosAll[i].position.x = clamp(landPosAll[i].position.x, minX_, maxX_);
-            landPosAll[i].position.y = clamp(landPosAll[i].position.y, minY_, maxY_);
-            landPosAll[i+1].position.x = clamp(landPosAll[i+1].position.x, minX_, maxX_);
-            landPosAll[i+1].position.y = clamp(landPosAll[i+1].position.y, minY_, maxY_);
+            if (dist < checkMinDist_ || distPred < checkMinDist_) {
+                ROS_INFO("Triggered safety guard due to");
+                ROS_INFO("dist = %f", dist);
+                ROS_INFO("distPred = %f", distPred);
+                requestLand = true;
+                auto unitVec = getUnitVecFromTwoPoseXY(
+                    poseTrackers_[i]->pose_.pose,
+                    poseTrackers_[j]->pose_.pose);
+                landPosAll[i].position.x += sepDist_ * unitVec.first;
+                landPosAll[i].position.y += sepDist_ * unitVec.second;
+                landPosAll[j].position.x -= sepDist_ * unitVec.first;
+                landPosAll[j].position.y -= sepDist_ * unitVec.second;
+                landPosAll[i].position.x = clamp(landPosAll[i].position.x, minX_, maxX_);
+                landPosAll[i].position.y = clamp(landPosAll[i].position.y, minY_, maxY_);
+                landPosAll[j].position.x = clamp(landPosAll[j].position.x, minX_, maxX_);
+                landPosAll[j].position.y = clamp(landPosAll[j].position.y, minY_, maxY_);
+            }
         }
     }
     if(requestLand) {
