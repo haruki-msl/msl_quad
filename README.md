@@ -38,6 +38,7 @@ If you find our work useful in your research, please consider citing:
 
 ## Software Versions
 - px4 firmware: v1.7.3
+  For Gazebo sitl simulation for motion-based communication, use custom firmware at https://github.com/haruki-msl/Firmware/tree/msl_motion_based_communication 
 - mavros: 0.23 or later
 - mavlink: 2018.2.2 or later
 
