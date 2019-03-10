@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+
+    <group ns="quad0">
+
+        <node pkg="mslquad" type="clearance.py" name="clearance" output="screen">
+        </node>   
+    
+    </group>
+
+    <group ns="quad1">
+
+        <node pkg="mslquad" type="clearance.py" name="clearance" output="screen">
+        </node>
+
+    </group>
+</launch>

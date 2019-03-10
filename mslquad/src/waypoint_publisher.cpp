@@ -98,7 +98,7 @@ void PX4WaypointPublisher::slowTimerCB(const ros::TimerEvent& event) {
     current_time_ = ros::Time::now();
     WaypointWithTime& new_point = waypoints_.front();
     // Only publish a new waypoint after the waiting time.
-    if (current_time_ > next_action_time_ && !waypoints_.empty()) {
+    if (current_time_ >= next_action_time_ && !waypoints_.empty()) {
         geometry_msgs::Pose target_pose;
         // Publish GPIO command.
         std_msgs::Bool gpio_out;
