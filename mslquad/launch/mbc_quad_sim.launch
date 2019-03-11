@@ -5,8 +5,8 @@
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
     <arg name="vehicle" default="iris"/>
-    <arg name="vehicle_ns1" default="quad0"/>
-    <arg name="vehicle_ns2" default="quad1"/>
+    <arg name="quad_ns_sender" default="quad0"/>
+    <arg name="quad_ns_receiver" default="quad1"/>
     <arg name="world" default="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
     <!-- gazebo configs -->
     <arg name="gui" default="true"/>
@@ -23,8 +23,8 @@
     </include>
     <!-- Global ROS Param to set the px4 controller into "sim" mode.-->
     <param name="simulation" value="true"/>
-    <!-- UAV1 -->
-    <group ns="$(arg vehicle_ns1)">
+    <!-- Sender -->
+    <group ns="$(arg quad_ns_sender)">
         <!-- MAVROS and vehicle configs -->        
         <arg name="ID" value="1"/>
         <arg name="fcu_url" default="udp://:14541@localhost:14581"/>
@@ -41,7 +41,7 @@
 	        <arg name="mavlink_tcp_port" value="4561"/>
             <arg name="ball" value="true"/>
             <arg name="ID" value="$(arg ID)"/>
-            <arg name="vehicle_namespace" value="$(arg vehicle_ns1)"/>
+            <arg name="vehicle_namespace" value="$(arg quad_ns_sender)"/>
         </include>
         <!-- MAVROS -->
         <include file="$(find mavros)/launch/px4.launch">
@@ -51,11 +51,11 @@
             <arg name="tgt_component" value="1"/>
 		</include>
         <node pkg="mslquad" type="vrnp_sim.py" name="vrnp_sim" output="screen">
-            <param name="modelname" value="$(arg vehicle_ns1)"/>
+            <param name="modelname" value="$(arg quad_ns_sender)"/>
         </node>
     </group>
-    <!-- UAV2 -->
-    <group ns="$(arg vehicle_ns2)">
+    <!-- Receiver -->
+    <group ns="$(arg quad_ns_receiver)">
         <!-- MAVROS and vehicle configs -->
         <arg name="ID" value="2"/>
         <arg name="fcu_url" default="udp://:14542@localhost:14582"/>
@@ -72,7 +72,7 @@
             <arg name="mavlink_tcp_port" value="4562"/>
             <arg name="camera" value="true"/>
             <arg name="ID" value="$(arg ID)"/>
-            <arg name="vehicle_namespace" value="$(arg vehicle_ns2)"/>
+            <arg name="vehicle_namespace" value="$(arg quad_ns_receiver)"/>
         </include>
         <!-- MAVROS -->
         <include file="$(find mavros)/launch/px4.launch">
@@ -82,7 +82,7 @@
             <arg name="tgt_component" value="1"/>
         </include>
         <node pkg="mslquad" type="vrnp_sim.py" name="vrnp_sim" output="screen">
-            <param name="modelname" value="$(arg vehicle_ns2)"/>
+            <param name="modelname" value="$(arg quad_ns_receiver)"/>
         </node>
     </group>
 </launch>

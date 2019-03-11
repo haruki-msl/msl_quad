@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="experiment_id" default="1"/>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id_sender" default="0"/>
+    <arg name="id_receiver" default="1"/>
+    <arg name="true_class" default="1"/>
+    <arg name="num_repeat_max" default="3"/>
+    <arg name="policy" default="mcts"/>
+    <arg name="min_x" default="-7"/>
+    <arg name="max_x" default="7"/>
+    <arg name="min_y" default="-2.7"/>
+    <arg name="max_y" default="2.7"/>
+
+    <!-- Simulation Startup -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="0 mslquad mbc_quad_sim.launch quad_ns_sender:=$(arg mav_name)$(arg id_sender)
+                                              quad_ns_receiver:=$(arg mav_name)$(arg id_receiver)"
+          name="timed_roslaunch_quad_sim" output="screen" />
+    <!-- Julia Node -->
+    <group ns="$(arg mav_name)$(arg id_receiver)">
+        <!-- Setup ActiveMBC receiver node -->
+        <node pkg="mslquad" type="mbc_receiver_node.jl" name="mbc_receiver_controller" output="screen">
+            <param name="experiment_id" value="$(arg experiment_id)"/>
+            <param name="quad_ns_receiver" value="$(arg mav_name)$(arg id_receiver)"/>
+            <param name="true_class" value="$(arg true_class)"/>
+            <param name="num_repeat_max" value="$(arg num_repeat_max)"/>
+            <param name="policy" value="$(arg policy)"/>
+            <param name="min_x" value="$(arg min_x)"/>
+            <param name="max_x" value="$(arg max_x)"/>
+            <param name="min_y" value="$(arg min_y)"/>
+            <param name="max_y" value="$(arg max_y)"/>
+        </node>
+    </group>
+    <!-- Pose Controller Setup -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="25 mslquad pose_controller.launch id:=$(arg id_sender) takeoff_height:=1.7"
+          name="timed_roslaunch_pose_controller_$(arg id_sender)" output="screen" />
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="25 mslquad pose_controller.launch id:=$(arg id_receiver) takeoff_height:=1.2"
+          name="timed_roslaunch_pose_controller_$(arg id_receiver)" output="screen" />
+    <!-- Sphere Tracker Setup -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="30 mbc_sender_tracker mbc_sender_tracking_quad_sim.launch rob_name:=$(arg mav_name)$(arg id_receiver)"
+          name="timed_roslaunch_mbc_sender_tracker" output="screen" />
+    <!-- Takeoff -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="40 mslquad mbc_sim_arm_offboard.launch quad_ns_sender:=$(arg mav_name)$(arg id_sender)
+                                                       quad_ns_receiver:=$(arg mav_name)$(arg id_receiver)"
+          name="timed_roslaunch_arm" output="screen" />
+
+</launch>

@@ -1,17 +1,13 @@
 <?xml version="1.0"?>
 <launch>
-
-    <group ns="quad0">
-
-        <node pkg="mslquad" type="clearance.py" name="clearance" output="screen">
-        </node>   
-    
-    </group>
-
-    <group ns="quad1">
-
+    <arg name="quad_ns_sender" default="quad0"/>
+    <arg name="quad_ns_receiver" default="quad1"/>
+    <group ns="$(arg quad_ns_sender)">
         <node pkg="mslquad" type="clearance.py" name="clearance" output="screen">
         </node>
-
+    </group>
+    <group ns="$(arg quad_ns_receiver)">
+        <node pkg="mslquad" type="clearance.py" name="clearance" output="screen">
+        </node>
     </group>
 </launch>

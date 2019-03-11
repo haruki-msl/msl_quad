@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id_sender" default="0"/>
+    <arg name="id_receiver" default="1"/>
+    <arg name="check_min_dist" default="0.6"/>
+    <arg name="min_x" default="-7"/>
+    <arg name="max_x" default="7"/>
+    <arg name="min_y" default="-2.7"/>
+    <arg name="max_y" default="2.7"/>
+
+	<rosparam param="safety/quad_name" subst_value="True">$(arg mav_name)</rosparam>
+    <rosparam param="safety/quad_ids" subst_value="True">[$(arg id_sender),$(arg id_receiver)]</rosparam>
+
+    <node pkg="mslquad" type="safety" name="safety" output="screen">
+        <param name="check_min_dist" value="$(arg check_min_dist)"/>
+        <param name="sep_dist" value="0.5"/>
+        <param name="dt_pred" value="0.1"/>
+        <param name="min_x" value="$(arg min_x)"/>
+        <param name="max_x" value="$(arg max_x)"/>
+        <param name="min_y" value="$(arg min_y)"/>
+        <param name="max_y" value="$(arg max_y)"/>
+    </node>
+
+</launch>
