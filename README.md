@@ -45,7 +45,10 @@ If you find our work useful in your research, please consider citing:
 ## Dependencies
 - glog: https://github.com/ethz-asl/glog_catkin
 - ros_vrpn_client: https://github.com/StanfordMSL/ros_vrpn_client
+- timed_roslaunch
 - Eigen3
+- Julia: v1.0.3 with ActiveMBC package: https://github.com/haruki-msl/ActiveMBC.jl
+
 
 ## Pixhawk Configuration
 
