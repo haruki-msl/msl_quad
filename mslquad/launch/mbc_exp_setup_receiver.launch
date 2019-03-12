@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id_receiver" default="7"/>
+
+    <arg name="fcu_url" default="/dev/ttySAC0:921600"/>
+
+    <!-- VRPN Startup -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="0 mslquad quad_vrpn.launch id:=$(arg id_receiver) fcu_url:=$(arg fcu_url)"
+          name="timed_roslaunch_quad_sim" output="screen" />
+    <!-- Pose Controller Setup (Make sure takeoff_height is consistent with sender waypoints) -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="25 mslquad pose_controller.launch id:=$(arg id_receiver) takeoff_height:=1.2"
+          name="timed_roslaunch_pose_controller_$(arg id_receiver)" output="screen" />
+    <!-- Sphere Tracker Setup -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="30 mbc_sender_tracker mbc_sender_tracking.launch rob_name:=$(arg mav_name)$(arg id_receiver)"
+          name="timed_roslaunch_mbc_sender_tracker" output="screen" />
+
+</launch>

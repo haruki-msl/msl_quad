@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="experiment_id" default="1"/>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id_sender" default="6"/>
+    <arg name="id_receiver" default="7"/>
+    <arg name="true_class" default="1"/>
+    <arg name="num_repeat_max" default="3"/>
+    <arg name="policy" default="mcts"/>
+
+    <arg name="check_min_dist" default="0.6"/>
+    <arg name="min_x" default="-7"/>
+    <arg name="max_x" default="7"/>
+    <arg name="min_y" default="-2.7"/>
+    <arg name="max_y" default="2.7"/>
+
+    <!-- Julia Node -->
+    <group ns="$(arg mav_name)$(arg id_receiver)">
+        <!-- Setup ActiveMBC receiver node -->
+        <node pkg="mslquad" type="mbc_receiver_node.jl" name="mbc_receiver_controller" output="screen">
+            <param name="experiment_id" value="$(arg experiment_id)"/>
+            <param name="quad_ns_receiver" value="$(arg mav_name)$(arg id_receiver)"/>
+            <param name="true_class" value="$(arg true_class)"/>
+            <param name="num_repeat_max" value="$(arg num_repeat_max)"/>
+            <param name="policy" value="$(arg policy)"/>
+            <param name="min_x" value="$(arg min_x)"/>
+            <param name="max_x" value="$(arg max_x)"/>
+            <param name="min_y" value="$(arg min_y)"/>
+            <param name="max_y" value="$(arg max_y)"/>
+        </node>
+    </group>
+    <!-- Safety Node -->
+    <include file="$(find mslquad)/launch/mbc_safety.launch">
+        <arg name="mav_name" value="$(arg mav_name)"/>
+        <arg name="id_sender" value="$(arg id_sender)"/>
+        <arg name="id_receiver" value="$(arg id_receiver)"/>
+        <arg name="check_min_dist" value="(arg check_min_dist)"/>
+        <arg name="min_x" value="$(arg min_x)"/>
+        <arg name="max_x" value="$(arg max_x)"/>
+        <arg name="min_y" value="$(arg min_y)"/>
+        <arg name="max_y" value="$(arg max_y)"/>
+    </include>
+
+</launch>

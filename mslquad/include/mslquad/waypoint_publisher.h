@@ -24,7 +24,7 @@ public:
     struct WaypointWithTime {
         geometry_msgs::Point position;
         double yaw_deg = 0.0;
-        ros::Duration waiting_time_s;
+        ros::Duration waiting_time_accumulated_s;
         bool gpio_out = false;
     };
 
@@ -39,11 +39,10 @@ private:
     std::queue<WaypointWithTime> waypoints_;
     double maxFreq_;
     ros::Time initial_time_;
-    ros::Time next_action_time_;
     ros::Time current_time_;
-    ros::Timer slowTimer_;
+    ros::Timer timer_;
 
-    void slowTimerCB(const ros::TimerEvent& event);
+    void timerCB(const ros::TimerEvent& event);
 };
 
 #endif //__POSE_TRACK_WAYPOINT_PUBLISHER_H__

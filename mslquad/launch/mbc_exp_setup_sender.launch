@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="mav_name" default="quad"/>
+    <arg name="id_sender" default="6"/>
+
+    <arg name="fcu_url" default="/dev/ttySAC0:921600"/>
+
+    <!-- VRPN Startup -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="0 mslquad quad_vrpn.launch id:=$(arg id_sender) fcu_url:=$(arg fcu_url)"
+          name="timed_roslaunch_quad_sim" output="screen" />
+    <!-- Pose Controller Setup (Make sure takeoff_height is consistent with sender waypoints) -->
+    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+          args="25 mslquad pose_controller.launch id:=$(arg id_sender) takeoff_height:=1.7"
+          name="timed_roslaunch_pose_controller_$(arg id_sender)" output="screen" />
+	<!-- GPIO Setup -->
+	<include file="$(find mslquad)/launch/gpio.launch">
+		<arg name="id" value="$(arg id_sender)"/>
+	</include>
+
+</launch>

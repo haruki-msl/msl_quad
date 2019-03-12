@@ -1,14 +1,10 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="mav_name" default="quad"/>
-    <arg name="id_sender" default="0"/>
-    <arg name="id_receiver" default="1"/>
-    <arg name="true_class" default="3"/>
+    <arg name="id_sender" default="6"/>
+    <arg name="true_class" default="1"/>
     <arg name="num_repeat_max" default="3"/>
-    <!-- Gazebo Simulation Startup -->
-    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-          args="0 mslquad quad_sim.launch quad_ns:=$(arg mav_name)$(arg id_sender)"
-          name="timed_roslaunch_quad_sim" output="screen" />
+
     <!-- Julia Nodes -->
     <group ns="$(arg mav_name)$(arg id_sender)">
         <!-- Read Codebook_sender and generate waypoints file -->
@@ -24,13 +20,5 @@
             <param name="yz_plane_flag" value="true"/>
         </node>
     </group>
-    <!-- Pose Controller Setup (Make sure takeoff_height is consistent with sender waypoints) -->
-    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-          args="25 mslquad pose_controller.launch id:=$(arg id_sender) takeoff_height:=1.7"
-          name="timed_roslaunch_pose_controller_$(arg id_sender)" output="screen" />
-    <!-- Takeoff -->
-    <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-          args="30 mslquad sim_arm_offboard.launch quad_ns:=$(arg mav_name)$(arg id_sender)"
-          name="timed_roslaunch_arm" output="screen" />
 
 </launch>

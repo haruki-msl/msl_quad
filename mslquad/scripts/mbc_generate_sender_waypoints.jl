@@ -21,6 +21,10 @@ num_repeat_max = get_param("~num_repeat_max");
 
 filename = joinpath((@__DIR__), "..", "resource/mbc_waypoints_sender_$(true_class).txt");
 TmpArray = Vector{String}();
+TmpString = vcat(string(interval),
+                 string.(Codebook_sender[true_class][1][2:end]),
+                 "0");
+push!(TmpArray, join(TmpString, " "));
 for jj = 1:num_repeat_max;
     for kk = 1:length(Codebook_sender[true_class])
         TmpString = vcat(string.(Codebook_sender[true_class][kk][1:end]),
@@ -38,6 +42,6 @@ open(filename, "w") do io
     writedlm(io, TmpArray)
 end;
 @assert sum([parse(Float64, TmpString[1:3]) for TmpString in TmpArray]) ≈ begin
-    duration*num_repeat_max + interval*(num_repeat_max - 1)
+    duration*num_repeat_max + interval*num_repeat_max
 end;
 loginfo("Sender waypoints generation done.")
