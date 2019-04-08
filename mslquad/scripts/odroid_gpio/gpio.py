@@ -16,6 +16,8 @@ class GPIOSet:
             print("Required ROS param(s) not found in ROS parameter server. Did you specify correct mav name?")
         wpi.wiringPiSetup()
         wpi.pinMode(self.pin_num, 1)
+        # Turn off the pin by default.
+        wpi.digitalWrite(self.pin_num, 0)
         self.gpioSetSub = rospy.Subscriber(self.topic_name, Bool, self.gpio_set_cb)
         rospy.loginfo("Initiated GPIO Subscriber node.")
 

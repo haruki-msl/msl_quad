@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+    <arg name="mav_name" default="quad"/>
+    <arg name="receiver_id" default="7"/>
+
+    <arg name="file_path"
+         default="$(env HOME)/catkin_ws/src/msl_quad/mslquad/resource/mbc_waypoints_init_receiver.txt"/>
+
+    <group ns="$(arg mav_name)$(arg receiver_id)">
+        <node pkg="mslquad" type="waypoint_publisher" name="waypoint_publisher"
+              args="$(arg mav_name)$(arg receiver_id) $(arg file_path)" output="screen">
+        </node>
+    </group>
+
+</launch>

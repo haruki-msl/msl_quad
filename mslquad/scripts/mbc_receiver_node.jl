@@ -53,6 +53,8 @@ mutable struct ROSWrapper
     num_repeated::Int64                          # Number of times sender's trajectory has been repeated (including prior initialization)
 
     simulation_flag::Bool;                       # Flag for ROS-Gazebo simulation using StanfordMSL/mslquad
+    schedule_ready_flag::Bool;                   # Flag for this.schedule availability
+    pose_ready_flag::Bool                        # Flag for receiver pose message availability
     started_flag::Bool;                          # Flag for starting communication process
     new_measurement_flag::Bool;                  # Flag for receiving new measurement
 
@@ -109,17 +111,17 @@ mutable struct ROSWrapper
         this.max_y = max_y;
         this.command_pub = Publisher("/"*quad_ns*"/command/pose",
                                      Pose,
-                                     queue_size = 1);
+                                     queue_size = 10);
         this.measurement_sub = Subscriber("/"*quad_ns*"/camera/camera_measurement",
                                           TwistStamped,
                                           measurement_cb!,
                                           (this, ),
-                                          queue_size = 1);
+                                          queue_size = 10);
         this.receiver_pose_sub = Subscriber("/"*quad_ns*"/mavros/local_position/pose",
                                            PoseStamped,
                                            receiver_pose_cb!,
                                            (this, ),
-                                           queue_size = 1);
+                                           queue_size = 10);
         this.simulation_flag = begin
             has_param("/simulation") && get_param("/simulation")
         end;
@@ -134,6 +136,9 @@ mutable struct ROSWrapper
         else
             loginfo("Experiment mode");
         end
+        this.pose_ready_flag = false;
+        this.schedule_ready_flag = false;
+        this.started_flag = false;
         # Pre-compile get_prior
         batch_measurement = rand(2*length(this.Codebook[1]));
         #prior_tmp = remotecall_fetch(get_prior, 2 ,this.Codebook, batch_measurement, this.rng);
@@ -150,23 +155,28 @@ mutable struct ROSWrapper
     end
 end
 
-function measurement_cb!(measurement::TwistStamped, wrapper::ROSWrapper)
+@inline function measurement_cb!(measurement::TwistStamped, wrapper::ROSWrapper)
     # println("Measurement message received.");
     logdebug("Measurement message received.");
-    # Get measurement schedule from initial measurement time.
+    current_time = measurement.header.stamp;
     if !(wrapper.started_flag) && !(wrapper.simulation_flag)
         # Got initial measurement. Starting communication process.
-        wrapper.initial_time = measurement.header.stamp;
         wrapper.started_flag = true;
-        loginfo("Got initial measurement in experiment. Starting communication process at $(to_sec(wrapper.initial_time))");
-        wrapper.schedule = begin
-            get_measurement_schedule(wrapper.initial_time,
-                                     wrapper.num_repeat_max)
-        end;
     end
-    if wrapper.started_flag
-        current_time = measurement.header.stamp;
+    if wrapper.started_flag && wrapper.pose_ready_flag
+        if !(wrapper.schedule_ready_flag)
+            # Get measurement schedule from initial measurement time.
+            wrapper.initial_time = current_time;
+            loginfo("Starting communication process at $(wrapper.initial_time)");
+            wrapper.schedule = begin
+                get_measurement_schedule(wrapper.initial_time,
+                                         wrapper.num_repeat_max,
+                                         wrapper.simulation_flag)
+            end;
+            wrapper.schedule_ready_flag = true;
+        end
         if isempty(wrapper.schedule)
+            # Communication process completed.
             if wrapper.simulation_flag
                 filename = joinpath(dirname(pathof(ActiveMBC)), "../result_sim/data_$(wrapper.experiment_id)_$(wrapper.true_class)_$(policy_name).jld");
             else
@@ -189,11 +199,11 @@ function measurement_cb!(measurement::TwistStamped, wrapper::ROSWrapper)
         end
         current_lap, next_measurement_time = wrapper.schedule[1];
         valid_measurement_time = begin
-            current_time >= next_measurement_time - Duration(0.2) &&
-            current_time <= next_measurement_time + Duration(0.2);
+            current_time >= next_measurement_time - Duration(0.25) &&
+            current_time <= next_measurement_time + Duration(0.25);
         end
         if valid_measurement_time
-            loginfo("Measurement made at $(to_sec(current_time)) while next_measurement_time is $(to_sec(next_measurement_time))");
+            loginfo("Measurement made at $(current_time) while next_measurement_time is $(next_measurement_time)");
             popfirst!(wrapper.schedule);
             wrapper.measurement = [to_sec(current_time),
                                    measurement.twist.linear.x,
@@ -227,7 +237,7 @@ function measurement_cb!(measurement::TwistStamped, wrapper::ROSWrapper)
             end
         end
     else
-        rossleep(0.01);
+        #rossleep(0.01);
     end
     #println("Measurement message ended.");
     logdebug("Measurement message ended.");
@@ -235,10 +245,14 @@ end;
 
 function receiver_pose_cb!(receiver_pose::PoseStamped, wrapper::ROSWrapper)
     logdebug("Pose message received.");
+    if !(wrapper.pose_ready_flag)
+        loginfo("First pose message received. Control ready...")
+        wrapper.pose_ready_flag = true;
+    end
     r = stateVecFromPose(receiver_pose.pose);
     wrapper.state = r;
     current_time = receiver_pose.header.stamp;
-    if wrapper.started_flag
+    if wrapper.started_flag && wrapper.schedule_ready_flag
         if isempty(wrapper.schedule)
             if wrapper.simulation_flag
                 filename = joinpath(dirname(pathof(ActiveMBC)), "../result_sim/data_$(wrapper.experiment_id)_$(wrapper.true_class)_$(policy_name).jld");
@@ -261,7 +275,7 @@ function receiver_pose_cb!(receiver_pose::PoseStamped, wrapper::ROSWrapper)
             end
         end
         ~, next_measurement_time = wrapper.schedule[1]
-        if next_measurement_time  + Duration(0.2) < current_time
+        if next_measurement_time  + Duration(0.25) < current_time
             popfirst!(wrapper.schedule);
             logwarn("Measurement schedule popped in receiver_pose_cb. Likely a measurement was missed.")
             wrapper.measurement = [to_sec(current_time), NaN, NaN];
@@ -276,7 +290,7 @@ function receiver_pose_cb!(receiver_pose::PoseStamped, wrapper::ROSWrapper)
             wrapper.new_measurement_flag = false;
         end
     else
-        rossleep(0.01);
+        #rossleep(0.01);
     end
     logdebug("Pose message ended.");
 end;
@@ -329,21 +343,15 @@ function control(wrapper::ROSWrapper)
 end
 
 # For simulation only
-function sender_command_cb!(sender_command::Pose, wrapper::ROSWrapper)
+@inline function sender_command_cb!(sender_command::Pose, wrapper::ROSWrapper)
     logdebug("Sender command message received.")
     if wrapper.simulation_flag && !(wrapper.started_flag)
         # Got initial measurement in simulation. Starting communication process.
-        wrapper.initial_time = get_rostime();
-        loginfo("Got initial measurement in simulation. Starting communication process at $(to_sec(wrapper.initial_time))");
-        wrapper.schedule = begin
-            get_measurement_schedule(wrapper.initial_time,
-                                     wrapper.num_repeat_max)
-        end;
         wrapper.started_flag = true;
     else
-        rossleep(1.0);
+        #rossleep(1.0);
     end
-    logdebug("Sender command message ended.");
+    logdebug("Sender command callback finished.");
 end;
 
 
@@ -402,5 +410,5 @@ wrapper = ROSWrapper(experiment_id,
                      policy,
                      rng,
                      min_x, max_x, min_y, max_y);
-loginfo("setup done. spinning...");
+loginfo("setup done. waiting for initial pose message...");
 spin();
