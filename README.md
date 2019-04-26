@@ -42,6 +42,7 @@ If you find our work useful in your research, please consider citing:
 - mavlink: 2018.2.2 or later
 
 ## Dependencies
+- vrpn_client_ros: install with `sudo apt-get install ros-<VERSION>-vrpn-client_ros`
 - timed_roslaunch
 - Eigen3
 - Julia: v1.0.3 with ActiveMBC package: https://github.com/haruki-msl/ActiveMBC.jl
