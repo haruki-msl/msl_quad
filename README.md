@@ -16,7 +16,6 @@ For high-level trajectory planning and generation, please refer to our <a href="
   * [Contributing](#contributing)
 
 ## Demo Videos
-
 <a href="https://youtu.be/yH0KMWm9cNU" target="_blank"><img src="https://img.youtube.com/vi/yH0KMWm9cNU/0.jpg" 
 alt="cla" width="240" height="180" border="10" /></a>
 
@@ -43,8 +42,6 @@ If you find our work useful in your research, please consider citing:
 - mavlink: 2018.2.2 or later
 
 ## Dependencies
-- glog: https://github.com/ethz-asl/glog_catkin
-- ros_vrpn_client: https://github.com/StanfordMSL/ros_vrpn_client
 - timed_roslaunch
 - Eigen3
 - Julia: v1.0.3 with ActiveMBC package: https://github.com/haruki-msl/ActiveMBC.jl
@@ -79,7 +76,7 @@ which will change the baud rate of the only serial port (TELEM 1) upon boot up.
 #### Common
 - Start mavros and VRPN for mocap: ```roslaunch mslquad quad_vrpn.launch```
 
-- May need to change ```vrpn_server_ip``` in ```launch/vrpn.launch``` to the ip address of the mocap machine.
+- May need to change ```vrpn_server_ip``` in ```launch/vrpn_track.launch``` to the ip address of the mocap machine.
 
 #### Trajectory Following
 - A basic trajectory following controller is implemented in **src/px4_base_controller.cpp**.
