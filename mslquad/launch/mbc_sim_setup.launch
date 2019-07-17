@@ -5,7 +5,7 @@
     <arg name="id_sender" default="0"/>
     <arg name="id_receiver" default="1"/>
     <arg name="true_class" default="1"/>
-    <arg name="num_repeat_max" default="3"/>
+    <arg name="num_repeat_max" default="5"/>
     <arg name="policy" default="mcts"/>
     <arg name="min_x" default="-7"/>
     <arg name="max_x" default="7"/>

@@ -313,6 +313,7 @@ function control(wrapper::ROSWrapper)
     new_belief = ekf_update(prev_belief, prev_action, new_measurement[2:3], wrapper.Codebook);
     push!(wrapper.belief_history, new_belief);
     loginfo("belief updated.");
+    loginfo("class probs: $(wrapper.belief_history[end].state.prior.p)");
     #new_action = remotecall_fetch(feedback, 2, new_belief, wrapper.policy);
     new_action = feedback(new_belief, wrapper.policy);
     push!(wrapper.action_history, new_action);

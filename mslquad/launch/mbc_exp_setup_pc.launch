@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="experiment_id" default="1"/>
+    <arg name="experiment_id" default="7"/>
     <arg name="mav_name" default="quad"/>
     <arg name="id_sender" default="6"/>
     <arg name="id_receiver" default="7"/>
-    <arg name="true_class" default="1"/>
-    <arg name="num_repeat_max" default="3"/>
+    <arg name="true_class" default="2"/>
+    <arg name="num_repeat_max" default="5"/>
     <arg name="policy" default="mcts"/>
 
     <arg name="check_min_dist" default="0.6"/>

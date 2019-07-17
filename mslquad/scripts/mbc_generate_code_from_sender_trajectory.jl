@@ -33,7 +33,7 @@ mutable struct ROSWrapperCodeGen
     schedule_ready_flag::Bool                           # Flag for this.schedule availability
     pose_ready_flag::Bool                               # Flag for sender pose message availability
     started_flag::Bool                                  # Flag for starting communication process
-    yz_plane_flag::Bool                                 # If this is true, y's in Code are always 0
+    xz_plane_flag::Bool                                 # If this is true, y's in Code are always constant.
 
     state_histories::Vector{Vector{Vector{Float64}}}    # Sender's state histories for generating Code
     Code::Vector{Vector{Float64}}                       # Generated Code of true_class
@@ -44,7 +44,7 @@ mutable struct ROSWrapperCodeGen
 
     function ROSWrapperCodeGen(quad_ns_sender::String,
                                true_class::Int64,
-                               yz_plane_flag::Bool,
+                               xz_plane_flag::Bool,
                                num_repeat_max::Int64)
         this = new();
         this.quad_ns_sender = quad_ns_sender;
@@ -56,7 +56,7 @@ mutable struct ROSWrapperCodeGen
         this.interval = interval;
         this.dt = dt;
         this.num_repeat_max = num_repeat_max;
-        this.yz_plane_flag = yz_plane_flag;
+        this.xz_plane_flag = xz_plane_flag;
         this.sender_pose_sub = Subscriber("/"*quad_ns_sender*"/mavros/local_position/pose",
                                           PoseStamped,
                                           sender_pose_cb!,
@@ -106,9 +106,9 @@ end
         end
         if valid_measurement_time
             println("Sender pose received at $(current_time) while next_measurement_time is $(next_measurement_time)");
-            if wrapper.yz_plane_flag
-                point = [0.0,
-                         sender_pose.pose.position.y,
+            if wrapper.xz_plane_flag
+                point = [sender_pose.pose.position.x,
+                         1.8,
                          sender_pose.pose.position.z];
             else
                 point = [sender_pose.pose.position.x,
@@ -133,11 +133,11 @@ end
                 filename = joinpath(dirname(pathof(ActiveMBC)), "../resource/code_$(wrapper.true_class).jld");
                 save(filename, "Code_$(wrapper.true_class)", wrapper.Code);
                 println("Code saved at "*filename);
-                if wrapper.yz_plane_flag
-                    scatter([p[2] for p in wrapper.Code],
+                if wrapper.xz_plane_flag
+                    scatter([p[1] for p in wrapper.Code],
                             [p[3] for p in wrapper.Code],
                             aspect_ratio=1.0)
-                    xaxis!("y")
+                    xaxis!("x")
                     yaxis!("z")
                     title!("Code $(wrapper.true_class)");
                     filename_png = joinpath(dirname(pathof(ActiveMBC)), "../resource/code_$(wrapper.true_class).png");
@@ -216,12 +216,12 @@ true_class = get_param("~true_class");
 #true_class = 1;
 @assert typeof(true_class) == Int && true_class in [ii for ii = 1:length(Codebook_sender)];
 # True if sender trajectory is 2D
-if has_param("~yz_plane_flag")
-    yz_plane_flag = get_param("~yz_plane_flag");
+if has_param("~xz_plane_flag")
+    xz_plane_flag = get_param("~xz_plane_flag");
 else
-    yz_plane_flag = true;
+    xz_plane_flag = true;
 end
-@assert typeof(yz_plane_flag) == Bool;
+@assert typeof(xz_plane_flag) == Bool;
 # Number of times the trajectories are repeated
 num_repeat_max = get_param("~num_repeat_max");
 #num_repeat_max = 3;
@@ -231,13 +231,13 @@ num_repeat_max = get_param("~num_repeat_max");
 # Make sure ROS launch file uses the correct waypoints txt file.
 loginfo("quad_ns_sender: $(quad_ns_sender)")
 loginfo("true_class: $(true_class)")
-loginfo("yz_plane_flag: $(yz_plane_flag)")
+loginfo("xz_plane_flag: $(xz_plane_flag)")
 loginfo("num_repeat_max: $(num_repeat_max)")
 
 # Make sure ROS launch file uses the correct waypoints txt file.
 wrapper = ROSWrapperCodeGen(quad_ns_sender,
                             true_class,
-                            yz_plane_flag,
+                            xz_plane_flag,
                             num_repeat_max);
 
 

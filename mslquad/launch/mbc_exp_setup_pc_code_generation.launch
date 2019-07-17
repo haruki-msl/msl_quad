@@ -2,8 +2,8 @@
 <launch>
     <arg name="mav_name" default="quad"/>
     <arg name="id_sender" default="6"/>
-    <arg name="true_class" default="1"/>
-    <arg name="num_repeat_max" default="3"/>
+    <arg name="true_class" default="3"/>
+    <arg name="num_repeat_max" default="5"/>
 
     <!-- Julia Nodes -->
     <group ns="$(arg mav_name)$(arg id_sender)">
@@ -17,7 +17,7 @@
             <param name="quad_ns_sender" value="$(arg mav_name)$(arg id_sender)"/>
             <param name="true_class" value="$(arg true_class)"/>
             <param name="num_repeat_max" value="$(arg num_repeat_max)"/>
-            <param name="yz_plane_flag" value="true"/>
+            <param name="xz_plane_flag" value="true"/>
         </node>
     </group>
 
