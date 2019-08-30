@@ -27,11 +27,14 @@ using ActiveMBC
 using JLD
 using LinearAlgebra
 using POMDPs
+using Statistics
 using Random
 using RobotOS
 
+@rosimport std_msgs.msg: Bool
 @rosimport geometry_msgs.msg: Pose, TwistStamped, PoseStamped
 rostypegen()
+import .geometry_msgs.msg: BoolMsg
 import .geometry_msgs.msg: Pose, TwistStamped, PoseStamped
 
 # Struct for Ros wrapper
@@ -40,12 +43,14 @@ mutable struct ROSWrapper
     quad_ns::String                              # ROS Namespace for receiver
     true_class::Int64                            # True trajectory class
 
+    keyframe_pub::Publisher{BoolMsg}             # ROS keyframe capture flag publisher
     command_pub::Publisher{Pose}                 # ROS command publisher
     measurement_sub::Subscriber{TwistStamped}    # ROS measurement subscriber
     receiver_pose_sub::Subscriber{PoseStamped}   # ROS receiver pose subscriber (for groundtruth compuation)
     sender_command_sub::Subscriber{Pose}         # ROS sender command subscriber (for simulation only)
 
     measurement::Vector{Float64};                # Buffer for latest measurement (of sender's waypoint in Codebook)
+    measurement_buffer::Vector{TwistStamped};           # Buffer for series of unprocessed measurements in TwistStamped type.
     state::Vector{Float64};                      # Buffer for latest receiver state
     initial_time::Time                           # Initial ROS-time when the communiation process started
     schedule::Vector{Tuple{Int64,Time}}          # Vector to store {trajectory_lap, measurement_time} schedule
@@ -92,6 +97,7 @@ mutable struct ROSWrapper
         this.true_class = true_class;
         this.started_flag = false;
         this.new_measurement_flag = false;
+        this.measurement_buffer = Vector{TwistStamped}();
         this.schedule = Vector{Tuple{Int64,Time}}();
         this.state_history = Vector{Vector{Float64}}();
         this.belief_history = Vector{MHEKFState}();
@@ -112,6 +118,9 @@ mutable struct ROSWrapper
         this.command_pub = Publisher("/"*quad_ns*"/command/pose",
                                      Pose,
                                      queue_size = 10);
+        this.keyframe_pub = Publisher("/"*quad_ns*"/camera/static_flag",
+                                      BoolMsg,
+                                      queue_size = 10);
         this.measurement_sub = Subscriber("/"*quad_ns*"/camera/camera_measurement",
                                           TwistStamped,
                                           measurement_cb!,
@@ -162,6 +171,9 @@ end
     if !(wrapper.started_flag) && !(wrapper.simulation_flag)
         # Got initial measurement. Starting communication process.
         wrapper.started_flag = true;
+        for ii = 1:10
+            publish(wrapper.keyframe_pub, BoolMsg(true));
+        end
     end
     if wrapper.started_flag && wrapper.pose_ready_flag
         if !(wrapper.schedule_ready_flag)
@@ -199,42 +211,17 @@ end
         end
         current_lap, next_measurement_time = wrapper.schedule[1];
         valid_measurement_time = begin
-            current_time >= next_measurement_time - Duration(0.25) &&
-            current_time <= next_measurement_time + Duration(0.25);
+            current_time >= next_measurement_time - Duration(0.30) &&
+            current_time <= next_measurement_time + Duration(0.30);
         end
         if valid_measurement_time
-            loginfo("Measurement made at $(current_time) while next_measurement_time is $(next_measurement_time)");
-            popfirst!(wrapper.schedule);
-            wrapper.measurement = [to_sec(current_time),
-                                   measurement.twist.linear.x,
-                                   measurement.twist.linear.y];
-            wrapper.new_measurement_flag = true;
-            push!(wrapper.measurement_history, wrapper.measurement);
-            if begin current_lap == 1 &&
-                     length(wrapper.measurement_history) == length(Codebook[1]) &&
-                     all([!isnan(m[2]) for m in wrapper.measurement_history])
-                 end;
-                # All measurements ready for prior initialization
-                wrapper.new_measurement_flag = false;
-                loginfo("Initializing prior belief.");
-                batch_measurement = vcat([x[2:3] for x in wrapper.measurement_history]...);
-                #prior = remotecall_fetch(get_prior,
-                #                        2,
-                #                        wrapper.Codebook,
-                #                        batch_measurement,
-                #                        wrapper.rng);
-                prior = get_prior(wrapper.Codebook, batch_measurement, wrapper.rng);
-                # rossleep(0.5);
-                push!(wrapper.state_history, wrapper.state);
-                push!(wrapper.belief_history, prior[1]);
-                loginfo("Prior ready.");
-                for ii = 1:length(wrapper.Codebook)
-                    loginfo("Class $(ii) probability: $(wrapper.belief_history[end].state.prior.p[ii])");
-                end
-            end
-            if current_lap > 1 && length(wrapper.belief_history) == 0
-                logerr("Prior not initialized properly! Most likely some observation was not made.");
-            end
+            ## added below for keyframe capture
+            #if isempty(wrapper.measurement_buffer) && current_lap > 1
+            #    for ii = 1:10
+            #        publish(wrapper.keyframe_pub, BoolMsg(true));
+            #    end
+            #end
+            push!(wrapper.measurement_buffer, measurement);
         end
     else
         #rossleep(0.01);
@@ -274,13 +261,72 @@ function receiver_pose_cb!(receiver_pose::PoseStamped, wrapper::ROSWrapper)
                 rossleep(1.0);
             end
         end
-        ~, next_measurement_time = wrapper.schedule[1]
-        if next_measurement_time  + Duration(0.25) < current_time
+        current_lap, next_measurement_time = wrapper.schedule[1]
+
+
+
+        if next_measurement_time + Duration(0.30) < current_time && !isempty(wrapper.measurement_buffer)
+            loginfo("Measurement made for $(next_measurement_time) out of $(length(wrapper.measurement_buffer)) measurements");
             popfirst!(wrapper.schedule);
+            wrapper.measurement = [to_sec(next_measurement_time),
+                                   mean([measurement.twist.linear.x for measurement in wrapper.measurement_buffer]),
+                                   mean([measurement.twist.linear.y for measurement in wrapper.measurement_buffer])];
+            empty!(wrapper.measurement_buffer);
+            wrapper.new_measurement_flag = true;
+            push!(wrapper.measurement_history, wrapper.measurement);
+            if begin current_lap == 1 &&
+                     length(wrapper.measurement_history) == length(Codebook[1]) &&
+                     all([!isnan(m[2]) for m in wrapper.measurement_history])
+                 end;
+                # All measurements ready for prior initialization
+                wrapper.new_measurement_flag = false;
+                loginfo("Initializing prior belief.");
+                batch_measurement = vcat([x[2:3] for x in wrapper.measurement_history]...);
+                #prior = remotecall_fetch(get_prior,
+                #                        2,
+                #                        wrapper.Codebook,
+                #                        batch_measurement,
+                #                        wrapper.rng);
+                prior = get_prior(wrapper.Codebook, batch_measurement, wrapper.rng);
+                # rossleep(0.5);
+                push!(wrapper.state_history, wrapper.state);
+                push!(wrapper.belief_history, prior[1]);
+                loginfo("Prior ready.");
+                for ii = 1:length(wrapper.Codebook)
+                    loginfo("Class $(ii) probability: $(wrapper.belief_history[end].state.prior.p[ii])");
+                end
+                for ii = 1:10
+                    publish(wrapper.keyframe_pub, BoolMsg(false));
+                end
+                estimated_pose_true_class = prior[1].state.components[wrapper.true_class].μ;
+                # If estimated position associated with the true class and the ground truth position are too
+                # different, then consider the prior initialization failed.
+                if norm(wrapper.state[4:6] - estimated_pose_true_class[4:6]) > 2.
+                    logerr("Estimated position is too off! Prior initialization failed.")
+                end
+            end
+            if current_lap > 1 && length(wrapper.belief_history) == 0
+                logerr("Prior not initialized properly! Most likely some observation was not made.");
+            end
+            #if current_lap > 1
+            #    for ii = 1:10
+            #        publish(wrapper.keyframe_pub, BoolMsg(false));
+            #    end
+            #end
+        end
+
+
+
+        if next_measurement_time + Duration(0.45) < current_time
+            popfirst!(wrapper.schedule);
+            empty!(wrapper.measurement_buffer);
             logwarn("Measurement schedule popped in receiver_pose_cb. Likely a measurement was missed.")
             wrapper.measurement = [to_sec(current_time), NaN, NaN];
             push!(wrapper.measurement_history, wrapper.measurement);
             wrapper.new_measurement_flag = true;
+            for ii = 1:10
+                publish(wrapper.keyframe_pub, BoolMsg(false));
+            end
         end
         if begin wrapper.new_measurement_flag &&
                  length(wrapper.belief_history) > 0 end
@@ -311,6 +357,7 @@ function control(wrapper::ROSWrapper)
     new_measurement = wrapper.measurement;
     #new_belief = remotecall_fetch(ekf_update, 2, prev_belief, prev_action, new_measurement[2:3], wrapper.Codebook);
     new_belief = ekf_update(prev_belief, prev_action, new_measurement[2:3], wrapper.Codebook);
+    #new_belief = ukf_update(prev_belief, prev_action, new_measurement[2:3], wrapper.Codebook);
     push!(wrapper.belief_history, new_belief);
     loginfo("belief updated.");
     loginfo("class probs: $(wrapper.belief_history[end].state.prior.p)");
@@ -360,15 +407,15 @@ node_name = "mbc_receive_controller";
 init_node(node_name, anonymous=true);
 # ROS namespace for receiver quad
 quad_ns_receiver = get_param("~quad_ns_receiver");
-#quad_ns_receiver = "quad1"
+#quad_ns_receiver = "quad7"
 @assert typeof(quad_ns_receiver) == String
 # True trajectory class executed by sender. Needed only for post-processing
 true_class = get_param("~true_class");
-#true_class = 1;
+#true_class = 2;
 @assert typeof(true_class) == Int && true_class in [ii for ii = 1:length(Codebook_sender)];
 # Number of times the trajectories are repeated
 num_repeat_max = get_param("~num_repeat_max");
-#num_repeat_max = 3;
+#num_repeat_max = 2;
 @assert typeof(num_repeat_max) == Int && num_repeat_max > 0
 # Policy of receiver
 policy_name = get_param("~policy");
@@ -385,7 +432,7 @@ min_y, max_y = get_param("~min_y"), get_param("~max_y");
 @assert typeof(max_y) <: Real
 # Experiment ID
 experiment_id = get_param("~experiment_id");
-#experiment_id = 1;
+#experiment_id = 11;
 @assert typeof(experiment_id) == Int && experiment_id > 0
 
 rng = MersenneTwister(123);

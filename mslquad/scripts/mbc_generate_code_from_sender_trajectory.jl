@@ -147,7 +147,7 @@ end
                     scatter3d([p[1] for p in wrapper.Code],
                               [p[2] for p in wrapper.Code],
                               [p[3] for p in wrapper.Code],
-                              aspect_ratio-1.0)
+                              aspect_ratio=1.0)
                     xaxis!("x")
                     yaxis!("y")
                     title!("Code $(wrapper.true_class)");

@@ -3,7 +3,7 @@
 <launch>
     <arg name="mav_name" default="quad"/>
     <arg name="sender_id" default="6"/>
-    <arg name="true_class" default="2"/>
+    <arg name="true_class" default="3"/>
 
     <arg name="file_path"
          default="$(env HOME)/catkin_ws/src/msl_quad/mslquad/resource/mbc_waypoints_sender_$(arg true_class).txt"/>

@@ -4,18 +4,18 @@
     <arg name="id_sender" default="0"/>
     <arg name="id_receiver" default="1"/>
     <arg name="true_class" default="3"/>
-    <arg name="num_repeat_max" default="3"/>
+    <arg name="num_repeat_max" default="5"/>
     <!-- Gazebo Simulation Startup -->
     <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
           args="0 mslquad quad_sim.launch quad_ns:=$(arg mav_name)$(arg id_sender)"
           name="timed_roslaunch_quad_sim" output="screen" />
     <!-- Julia Nodes -->
     <group ns="$(arg mav_name)$(arg id_sender)">
-        <!-- Read Codebook_sender and generate waypoints file -->
+        <!--
         <node pkg="mslquad" type="mbc_generate_sender_waypoints.jl" name="mbc_sender_waypoints_generator" output="screen">
             <param name="true_class" value="$(arg true_class)"/>
             <param name="num_repeat_max" value="$(arg num_repeat_max)"/>
-        </node>
+        </node> -->
         <!-- Setup Codebook generation node -->
         <node pkg="mslquad" type="mbc_generate_code_from_sender_trajectory.jl" name="mbc_codebook_generator" output="screen">
             <param name="quad_ns_sender" value="$(arg mav_name)$(arg id_sender)"/>
